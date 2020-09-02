@@ -4,18 +4,10 @@ if (express)
 {
     console.log("Express.JS found.");
 }
-else
-{
-    console.log("Express.JS not found. Please install Express.JS. npm install express --save.")
-}
 var socket = require("socket.io");
 if (socket)
 {
     console.log("Socket.IO found.");
-}
-else
-{
-    console.log("Socket.IO not found. Please install Socket.IO. npm install express --save.")
 }
 // Files found
 
@@ -25,12 +17,12 @@ var app = express();
 var server = http.Server(app);
 var users = [];
 var io = require("socket.io")(server);
-server.listen(4444, function () {
-    console.log("Server running at port 4444.")
+var count = 0;
+server.listen(80, function () {
+    console.log("Server running at port 80.")
 });
 app.get("/", function(req, res) {
     res.sendFile(__dirname + "/index.html");
-    res.sendFile(__dirname + "/favicon.png");
 })
 io.on("connection", function(socketio) {
     var name = "";
@@ -38,15 +30,39 @@ io.on("connection", function(socketio) {
         name = username;
         users.push(username);
         io.emit("has connected", {username: username, usersList: users});
+        count = count+1;
+        console.log(count+": <SERVER-THREAD-INFO>: "+name + " has connected. Online Users: " + users);
     });
     socketio.on("disconnect", function() {
         users.splice(users.indexOf(name), 1);
-        io.emit("has disconnected", {username: name, usersList: users})
+        io.emit("has disconnected", {username: name, usersList: users});
+        count = count+1;
+        console.log(count+": <SERVER-THREAD-INFO>: "+name + " has disconnected. Online Users: " + users);
     });
     socketio.on("new message", function(message) {
         io.emit("new message", message);
-    })
-    socketio.on("cleardata", function(){
-        socketio.emit("clearall");
-    })
+        count = count+1;
+        console.log(count+": <SERVER-USER-MESSAGE>: "+name+": "+message.message);
+    });
+    process.stdin.on('data',
+    (command) => {
+        //output comes as many times as clients for some reason
+        var msg = command.toString();
+        // if (msg.startsWith("say") == true || msg.startsWith("/say") == true)
+        // {
+            socketio.emit("server message", msg);
+        // }
+        // else if (msg.startsWith("users") == true || msg.startsWith("/users") == true)
+        // {
+        //     process.stdout.write("Online Users: "+users+". User Count: "+ users.length);
+        // }
+        // else if (msg.startsWith("help") == true || msg.startsWith("/help") == true)
+        // {
+        //     console.log("MCHAT HELP:\nsay **** or /say **** = Send message to clients from the console.\nhelp or /help = Get help about the server.\nusers or /users = Get info about all users online.");
+        // }
+        // else
+        // {
+        //     console.log("Unknown command. Type /help for help")
+        // }
+    });
 });
